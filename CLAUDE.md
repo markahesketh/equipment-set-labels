@@ -25,4 +25,4 @@ Updates are debounced (0.1s) via `ScheduleUpdate()` to coalesce rapid events.
 - `C_EquipmentSet` for equipment set data
 - `C_Container` for bag/bank slot inspection
 - `ContainerFrameCombinedBags` is the modern unified bag view (ContainerFrame1-13 are legacy/separate view)
-- Bank bag index is -1 (`BANK_BAG` constant)
+- Bank container index is -1 (`BANK_CONTAINER` constant)
