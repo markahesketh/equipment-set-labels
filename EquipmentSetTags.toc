@@ -1,0 +1,7 @@
+## Interface: 120000
+## Title: EquipmentSetTags
+## Notes: Displays equipment set names on item icons in bags and bank
+## Author:
+## Version: 1.0.0
+
+EquipmentSetTags.lua
