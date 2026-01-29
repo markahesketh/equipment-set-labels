@@ -4,6 +4,19 @@ local BANK_BAG = -1
 local itemSetText = {}
 local slotSetText = {}
 
+local EQUIP_SLOTS = {}
+for _, name in ipairs({
+    "HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot",
+    "ShirtSlot", "TabardSlot", "WristSlot", "HandsSlot", "WaistSlot",
+    "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot",
+    "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot"
+}) do
+    local slotID = GetInventorySlotInfo(name)
+    if slotID then
+        EQUIP_SLOTS[#EQUIP_SLOTS + 1] = {id = slotID, button = "Character" .. name}
+    end
+end
+
 local function RebuildItemSetCache()
     wipe(itemSetText)
 
@@ -33,7 +46,7 @@ local function RebuildItemSetCache()
     end
 end
 
-local function ScanBags()
+local function ScanSlots()
     wipe(slotSetText)
 
     for bag = 0, 12 do
@@ -53,10 +66,17 @@ local function ScanBags()
             slotSetText[BANK_BAG .. ":" .. slot] = itemSetText[info.itemID]
         end
     end
+
+    for _, slot in ipairs(EQUIP_SLOTS) do
+        local itemID = GetInventoryItemID("player", slot.id)
+        if itemID and itemSetText[itemID] then
+            slotSetText["e" .. slot.id] = itemSetText[itemID]
+        end
+    end
 end
 
-local function UpdateButton(button, bag, slot)
-    local text = slotSetText[bag .. ":" .. slot]
+local function UpdateButton(button, key)
+    local text = slotSetText[key]
     local label = button.EquipmentSetTagsLabel
 
     if text then
@@ -80,7 +100,7 @@ local function UpdateFrames()
         if frame and frame:IsShown() and frame.Items then
             for _, button in pairs(frame.Items) do
                 if button.GetBagID then
-                    UpdateButton(button, button:GetBagID(), button:GetID())
+                    UpdateButton(button, button:GetBagID() .. ":" .. button:GetID())
                 end
             end
         end
@@ -89,7 +109,7 @@ local function UpdateFrames()
     if ContainerFrameCombinedBags and ContainerFrameCombinedBags:IsShown() and ContainerFrameCombinedBags.Items then
         for _, button in pairs(ContainerFrameCombinedBags.Items) do
             if button.GetBagID then
-                UpdateButton(button, button:GetBagID(), button:GetID())
+                UpdateButton(button, button:GetBagID() .. ":" .. button:GetID())
             end
         end
     end
@@ -98,7 +118,16 @@ local function UpdateFrames()
         for i = 1, 28 do
             local button = _G["BankFrameItem" .. i]
             if button then
-                UpdateButton(button, BANK_BAG, i)
+                UpdateButton(button, BANK_BAG .. ":" .. i)
+            end
+        end
+    end
+
+    if CharacterFrame and CharacterFrame:IsShown() then
+        for _, slot in ipairs(EQUIP_SLOTS) do
+            local button = _G[slot.button]
+            if button then
+                UpdateButton(button, "e" .. slot.id)
             end
         end
     end
@@ -110,7 +139,7 @@ local function ScheduleUpdate()
     pending = true
     C_Timer.After(0.1, function()
         pending = false
-        ScanBags()
+        ScanSlots()
         UpdateFrames()
     end)
 end
@@ -121,6 +150,7 @@ events:RegisterEvent("EQUIPMENT_SETS_CHANGED")
 events:RegisterEvent("BAG_UPDATE_DELAYED")
 events:RegisterEvent("BANKFRAME_OPENED")
 events:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
+events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
 events:SetScript("OnEvent", function(_, event)
     if event == "EQUIPMENT_SETS_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
@@ -131,5 +161,6 @@ end)
 
 hooksecurefunc("ToggleAllBags", ScheduleUpdate)
 hooksecurefunc("OpenAllBags", ScheduleUpdate)
+hooksecurefunc("ToggleCharacter", ScheduleUpdate)
 
 RebuildItemSetCache()
