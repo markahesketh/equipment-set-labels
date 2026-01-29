@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-World of Warcraft retail addon that displays equipment set names as yellow text overlays on item icons in bags and bank. Shows up to 3 set names vertically, with "+" for additional sets. Names truncate at 5 characters.
+World of Warcraft retail addon that displays equipment set names as yellow text overlays on item icons in bags, bank, and character panel. Shows up to 3 set names vertically, with "+" for additional sets. Names truncate at 5 characters.
 
 ## Development
 
@@ -12,13 +12,17 @@ No build step. Copy addon folder to WoW AddOns directory and `/reload` in-game t
 
 Update `## Interface:` in .toc file when WoW version changes (currently 120000 for Midnight/12.0).
 
+Slash commands: `/esl` or `/equipsetlabels` opens options panel.
+
 ## Architecture
 
 Two-layer caching system:
 1. `itemSetText` - itemID to pre-formatted display string (rebuilt only on EQUIPMENT_SETS_CHANGED)
-2. `slotSetText` - "bag:slot" to display string (rebuilt on bag changes)
+2. `slotSetText` - "bag:slot" or "e{slotID}" to display string (rebuilt on bag/equipment changes)
 
 Updates are debounced (0.1s) via `ScheduleUpdate()` to coalesce rapid events.
+
+Saved variables: `EquipmentSetLabelsDB` stores user preferences (showBags, showBank, showCharacter).
 
 ## WoW API Notes
 
@@ -26,3 +30,4 @@ Updates are debounced (0.1s) via `ScheduleUpdate()` to coalesce rapid events.
 - `C_Container` for bag/bank slot inspection
 - `ContainerFrameCombinedBags` is the modern unified bag view (ContainerFrame1-13 are legacy/separate view)
 - Bank container index is -1 (`BANK_CONTAINER` constant)
+- Bank bag indices are 6-12
