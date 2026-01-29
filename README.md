@@ -5,6 +5,8 @@ World of Warcraft addon that displays equipment set names as text labels on item
 ![WoW Interface Version](https://img.shields.io/badge/WoW-12.0%20Midnight-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+<img width="515" height="179" alt="image" src="https://github.com/user-attachments/assets/bb9e1510-f8be-4a56-8797-4d010b651bb5" />
+
 ## Features
 
 - Yellow text overlays showing which equipment sets contain each item
