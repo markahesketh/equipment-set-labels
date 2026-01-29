@@ -1,8 +1,17 @@
-local MAX_NAME_LENGTH = 5
-local BANK_BAG = -1
+local ADDON_NAME = "EquipmentSetTags"
+local BANK_CONTAINER = -1
+
+local defaults = {
+    showBags = true,
+    showBank = true,
+    showCharacter = true,
+}
 
 local itemSetText = {}
 local slotSetText = {}
+local pending = false
+local optionsCategory
+local checkboxes = {}
 
 local EQUIP_SLOTS = {}
 for _, name in ipairs({
@@ -25,7 +34,7 @@ local function RebuildItemSetCache()
         local itemIDs = C_EquipmentSet.GetItemIDs(setID)
 
         if name and itemIDs then
-            local display = #name > MAX_NAME_LENGTH and name:sub(1, MAX_NAME_LENGTH - 1) .. "..." or name
+            local display = #name > 5 and name:sub(1, 5) .. ".." or name
 
             for _, itemID in pairs(itemIDs) do
                 if itemID and itemID > 0 then
@@ -36,7 +45,7 @@ local function RebuildItemSetCache()
                         local lines = select(2, existing:gsub("\n", "")) + 1
                         if lines < 3 then
                             itemSetText[itemID] = existing .. "\n" .. display
-                        elseif lines == 3 and not existing:find("+", 1, true) then
+                        elseif not existing:find("+", 1, true) then
                             itemSetText[itemID] = existing .. "\n+"
                         end
                     end
@@ -49,9 +58,8 @@ end
 local function ScanSlots()
     wipe(slotSetText)
 
-    for bag = 0, 12 do
-        local numSlots = C_Container.GetContainerNumSlots(bag)
-        for slot = 1, numSlots do
+    for bag = 0, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local info = C_Container.GetContainerItemInfo(bag, slot)
             if info and itemSetText[info.itemID] then
                 slotSetText[bag .. ":" .. slot] = itemSetText[info.itemID]
@@ -59,11 +67,19 @@ local function ScanSlots()
         end
     end
 
-    local numBankSlots = C_Container.GetContainerNumSlots(BANK_BAG) or 0
-    for slot = 1, numBankSlots do
-        local info = C_Container.GetContainerItemInfo(BANK_BAG, slot)
+    for slot = 1, C_Container.GetContainerNumSlots(BANK_CONTAINER) do
+        local info = C_Container.GetContainerItemInfo(BANK_CONTAINER, slot)
         if info and itemSetText[info.itemID] then
-            slotSetText[BANK_BAG .. ":" .. slot] = itemSetText[info.itemID]
+            slotSetText[BANK_CONTAINER .. ":" .. slot] = itemSetText[info.itemID]
+        end
+    end
+
+    for bag = 6, 12 do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and itemSetText[info.itemID] then
+                slotSetText[bag .. ":" .. slot] = itemSetText[info.itemID]
+            end
         end
     end
 
@@ -76,7 +92,7 @@ local function ScanSlots()
 end
 
 local function UpdateButton(button, key)
-    local text = slotSetText[key]
+    local text = key and slotSetText[key]
     local label = button.EquipmentSetTagsLabel
 
     if text then
@@ -95,12 +111,17 @@ local function UpdateButton(button, key)
 end
 
 local function UpdateFrames()
+    local db = EquipmentSetTagsDB or defaults
+
     for i = 1, 13 do
         local frame = _G["ContainerFrame" .. i]
         if frame and frame:IsShown() and frame.Items then
             for _, button in pairs(frame.Items) do
                 if button.GetBagID then
-                    UpdateButton(button, button:GetBagID() .. ":" .. button:GetID())
+                    local bagID = button:GetBagID()
+                    local isBank = bagID >= 6
+                    local enabled = isBank and db.showBank or db.showBags
+                    UpdateButton(button, enabled and (bagID .. ":" .. button:GetID()) or nil)
                 end
             end
         end
@@ -109,7 +130,7 @@ local function UpdateFrames()
     if ContainerFrameCombinedBags and ContainerFrameCombinedBags:IsShown() and ContainerFrameCombinedBags.Items then
         for _, button in pairs(ContainerFrameCombinedBags.Items) do
             if button.GetBagID then
-                UpdateButton(button, button:GetBagID() .. ":" .. button:GetID())
+                UpdateButton(button, db.showBags and (button:GetBagID() .. ":" .. button:GetID()) or nil)
             end
         end
     end
@@ -118,7 +139,7 @@ local function UpdateFrames()
         for i = 1, 28 do
             local button = _G["BankFrameItem" .. i]
             if button then
-                UpdateButton(button, BANK_BAG .. ":" .. i)
+                UpdateButton(button, db.showBank and (BANK_CONTAINER .. ":" .. i) or nil)
             end
         end
     end
@@ -127,13 +148,12 @@ local function UpdateFrames()
         for _, slot in ipairs(EQUIP_SLOTS) do
             local button = _G[slot.button]
             if button then
-                UpdateButton(button, "e" .. slot.id)
+                UpdateButton(button, db.showCharacter and ("e" .. slot.id) or nil)
             end
         end
     end
 end
 
-local pending = false
 local function ScheduleUpdate()
     if pending then return end
     pending = true
@@ -144,7 +164,60 @@ local function ScheduleUpdate()
     end)
 end
 
+local function CreateOptionsPanel()
+    local panel = CreateFrame("Frame")
+    panel.name = ADDON_NAME
+
+    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge")
+    title:SetPoint("TOPLEFT", 10, -16)
+    title:SetText(ADDON_NAME)
+    title:SetTextColor(1, 1, 1)
+
+    local resetBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    resetBtn:SetPoint("TOPRIGHT", -30, -16)
+    resetBtn:SetSize(100, 22)
+    resetBtn:SetText("Defaults")
+    resetBtn:SetScript("OnClick", function()
+        for k, v in pairs(defaults) do
+            EquipmentSetTagsDB[k] = v
+        end
+        for _, cb in ipairs(checkboxes) do
+            cb:SetChecked(EquipmentSetTagsDB[cb.dbKey])
+        end
+        ScheduleUpdate()
+    end)
+
+    local divider = panel:CreateTexture(nil, "ARTWORK")
+    divider:SetHeight(1)
+    divider:SetPoint("TOPLEFT", 10, -48)
+    divider:SetPoint("TOPRIGHT", -30, -48)
+    divider:SetColorTexture(0.6, 0.6, 0.6, 0.4)
+
+    local function AddCheckbox(label, dbKey, yOffset)
+        local text = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        text:SetPoint("TOPLEFT", 40, yOffset)
+        text:SetText(label)
+        text:SetTextColor(1, 0.82, 0)
+
+        local check = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+        check:SetPoint("LEFT", text, "LEFT", 220, 0)
+        check:SetScript("OnClick", function(self)
+            EquipmentSetTagsDB[dbKey] = self:GetChecked()
+            ScheduleUpdate()
+        end)
+        check.dbKey = dbKey
+        return check
+    end
+
+    checkboxes[1] = AddCheckbox("Show in bags", "showBags", -70)
+    checkboxes[2] = AddCheckbox("Show in bank", "showBank", -106)
+    checkboxes[3] = AddCheckbox("Show on equipped", "showCharacter", -142)
+
+    return panel
+end
+
 local events = CreateFrame("Frame")
+events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("EQUIPMENT_SETS_CHANGED")
 events:RegisterEvent("BAG_UPDATE_DELAYED")
@@ -152,15 +225,36 @@ events:RegisterEvent("BANKFRAME_OPENED")
 events:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
-events:SetScript("OnEvent", function(_, event)
-    if event == "EQUIPMENT_SETS_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
+events:SetScript("OnEvent", function(_, event, arg1)
+    if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
+        EquipmentSetTagsDB = EquipmentSetTagsDB or {}
+        for k, v in pairs(defaults) do
+            if EquipmentSetTagsDB[k] == nil then
+                EquipmentSetTagsDB[k] = v
+            end
+        end
+        local panel = CreateOptionsPanel()
+        optionsCategory = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+        Settings.RegisterAddOnCategory(optionsCategory)
+        for _, cb in ipairs(checkboxes) do
+            cb:SetChecked(EquipmentSetTagsDB[cb.dbKey])
+        end
+    elseif event == "PLAYER_ENTERING_WORLD" or event == "EQUIPMENT_SETS_CHANGED" then
         RebuildItemSetCache()
+        ScheduleUpdate()
+    else
+        ScheduleUpdate()
     end
-    ScheduleUpdate()
 end)
 
 hooksecurefunc("ToggleAllBags", ScheduleUpdate)
 hooksecurefunc("OpenAllBags", ScheduleUpdate)
 hooksecurefunc("ToggleCharacter", ScheduleUpdate)
 
-RebuildItemSetCache()
+SLASH_EQUIPMENTSETTAGS1 = "/est"
+SLASH_EQUIPMENTSETTAGS2 = "/equipsetags"
+SlashCmdList["EQUIPMENTSETTAGS"] = function()
+    if optionsCategory then
+        Settings.OpenToCategory(optionsCategory:GetID())
+    end
+end
