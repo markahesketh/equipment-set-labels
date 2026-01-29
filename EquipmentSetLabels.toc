@@ -1,0 +1,8 @@
+## Interface: 120000
+## Title: Equipment Set Labels
+## Notes: Displays equipment set names as labels on item icons
+## Author:
+## Version: 1.1.0
+## SavedVariables: EquipmentSetLabelsDB
+
+EquipmentSetLabels.lua

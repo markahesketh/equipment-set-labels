@@ -1,4 +1,5 @@
-local ADDON_NAME = "EquipmentSetTags"
+local ADDON_NAME = "EquipmentSetLabels"
+local DISPLAY_NAME = "Equipment Set Labels"
 local BANK_CONTAINER = -1
 
 local defaults = {
@@ -93,7 +94,7 @@ end
 
 local function UpdateButton(button, key)
     local text = key and slotSetText[key]
-    local label = button.EquipmentSetTagsLabel
+    local label = button.EquipmentSetLabelsLabel
 
     if text then
         if not label then
@@ -101,7 +102,7 @@ local function UpdateButton(button, key)
             label:SetFont(STANDARD_TEXT_FONT, 10, "OUTLINE")
             label:SetPoint("CENTER")
             label:SetTextColor(1, 0.82, 0)
-            button.EquipmentSetTagsLabel = label
+            button.EquipmentSetLabelsLabel = label
         end
         label:SetText(text)
         label:Show()
@@ -111,7 +112,7 @@ local function UpdateButton(button, key)
 end
 
 local function UpdateFrames()
-    local db = EquipmentSetTagsDB or defaults
+    local db = EquipmentSetLabelsDB or defaults
 
     for i = 1, 13 do
         local frame = _G["ContainerFrame" .. i]
@@ -166,11 +167,11 @@ end
 
 local function CreateOptionsPanel()
     local panel = CreateFrame("Frame")
-    panel.name = ADDON_NAME
+    panel.name = DISPLAY_NAME
 
     local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalHuge")
     title:SetPoint("TOPLEFT", 10, -16)
-    title:SetText(ADDON_NAME)
+    title:SetText(DISPLAY_NAME)
     title:SetTextColor(1, 1, 1)
 
     local resetBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
@@ -179,10 +180,10 @@ local function CreateOptionsPanel()
     resetBtn:SetText("Defaults")
     resetBtn:SetScript("OnClick", function()
         for k, v in pairs(defaults) do
-            EquipmentSetTagsDB[k] = v
+            EquipmentSetLabelsDB[k] = v
         end
         for _, cb in ipairs(checkboxes) do
-            cb:SetChecked(EquipmentSetTagsDB[cb.dbKey])
+            cb:SetChecked(EquipmentSetLabelsDB[cb.dbKey])
         end
         ScheduleUpdate()
     end)
@@ -202,7 +203,7 @@ local function CreateOptionsPanel()
         local check = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
         check:SetPoint("LEFT", text, "LEFT", 220, 0)
         check:SetScript("OnClick", function(self)
-            EquipmentSetTagsDB[dbKey] = self:GetChecked()
+            EquipmentSetLabelsDB[dbKey] = self:GetChecked()
             ScheduleUpdate()
         end)
         check.dbKey = dbKey
@@ -227,17 +228,17 @@ events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
 events:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
-        EquipmentSetTagsDB = EquipmentSetTagsDB or {}
+        EquipmentSetLabelsDB = EquipmentSetLabelsDB or {}
         for k, v in pairs(defaults) do
-            if EquipmentSetTagsDB[k] == nil then
-                EquipmentSetTagsDB[k] = v
+            if EquipmentSetLabelsDB[k] == nil then
+                EquipmentSetLabelsDB[k] = v
             end
         end
         local panel = CreateOptionsPanel()
         optionsCategory = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
         Settings.RegisterAddOnCategory(optionsCategory)
         for _, cb in ipairs(checkboxes) do
-            cb:SetChecked(EquipmentSetTagsDB[cb.dbKey])
+            cb:SetChecked(EquipmentSetLabelsDB[cb.dbKey])
         end
     elseif event == "PLAYER_ENTERING_WORLD" or event == "EQUIPMENT_SETS_CHANGED" then
         RebuildItemSetCache()
@@ -251,9 +252,9 @@ hooksecurefunc("ToggleAllBags", ScheduleUpdate)
 hooksecurefunc("OpenAllBags", ScheduleUpdate)
 hooksecurefunc("ToggleCharacter", ScheduleUpdate)
 
-SLASH_EQUIPMENTSETTAGS1 = "/est"
-SLASH_EQUIPMENTSETTAGS2 = "/equipsetags"
-SlashCmdList["EQUIPMENTSETTAGS"] = function()
+SLASH_EQUIPMENTSETLABELS1 = "/esl"
+SLASH_EQUIPMENTSETLABELS2 = "/equipsetlabels"
+SlashCmdList["EQUIPMENTSETLABELS"] = function()
     if optionsCategory then
         Settings.OpenToCategory(optionsCategory:GetID())
     end
