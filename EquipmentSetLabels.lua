@@ -7,7 +7,6 @@ local defaults = {
     showCharacter = true,
 }
 
-local itemSetText = {}
 local slotSetText = {}
 local pending = false
 local optionsCategory
@@ -26,60 +25,35 @@ for _, name in ipairs({
     end
 end
 
-local function RebuildItemSetCache()
-    wipe(itemSetText)
-
-    for _, setID in ipairs(C_EquipmentSet.GetEquipmentSetIDs()) do
-        local name = C_EquipmentSet.GetEquipmentSetInfo(setID)
-        local itemIDs = C_EquipmentSet.GetItemIDs(setID)
-
-        if name and itemIDs then
-            local display = #name > 5 and name:sub(1, 5) .. ".." or name
-
-            for _, itemID in pairs(itemIDs) do
-                if itemID and itemID > 0 then
-                    local existing = itemSetText[itemID]
-                    if not existing then
-                        itemSetText[itemID] = display
-                    elseif not existing:find(display, 1, true) then
-                        local lines = select(2, existing:gsub("\n", "")) + 1
-                        if lines < 3 then
-                            itemSetText[itemID] = existing .. "\n" .. display
-                        elseif not existing:find("+", 1, true) then
-                            itemSetText[itemID] = existing .. "\n+"
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
 local function ScanSlots()
     wipe(slotSetText)
 
-    for bag = 0, NUM_TOTAL_EQUIPPED_BAG_SLOTS do
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local info = C_Container.GetContainerItemInfo(bag, slot)
-            if info and itemSetText[info.itemID] then
-                slotSetText[bag .. ":" .. slot] = itemSetText[info.itemID]
-            end
-        end
-    end
+    for _, setID in ipairs(C_EquipmentSet.GetEquipmentSetIDs()) do
+        local name = C_EquipmentSet.GetEquipmentSetInfo(setID)
+        local display = #name > 5 and name:sub(1, 5) .. ".." or name
 
-    for bag = 6, 12 do
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local info = C_Container.GetContainerItemInfo(bag, slot)
-            if info and itemSetText[info.itemID] then
-                slotSetText[bag .. ":" .. slot] = itemSetText[info.itemID]
+        for _, location in pairs(C_EquipmentSet.GetItemLocations(setID) or {}) do
+            local loc = EquipmentManager_GetLocationData(location)
+            local key
+            if loc.isBags then
+                key = loc.bag .. ":" .. loc.slot
+            elseif loc.isPlayer then
+                key = "e" .. loc.slot
             end
-        end
-    end
 
-    for _, slot in ipairs(EQUIP_SLOTS) do
-        local itemID = GetInventoryItemID("player", slot.id)
-        if itemID and itemSetText[itemID] then
-            slotSetText["e" .. slot.id] = itemSetText[itemID]
+            if key then
+                local existing = slotSetText[key]
+                if not existing then
+                    slotSetText[key] = display
+                elseif not existing:find(display, 1, true) then
+                    local lines = select(2, existing:gsub("\n", "")) + 1
+                    if lines < 3 then
+                        slotSetText[key] = existing .. "\n" .. display
+                    elseif not existing:find("+", 1, true) then
+                        slotSetText[key] = existing .. "\n+"
+                    end
+                end
+            end
         end
     end
 end
@@ -228,9 +202,6 @@ events:SetScript("OnEvent", function(_, event, arg1)
         for _, cb in ipairs(checkboxes) do
             cb:SetChecked(EquipmentSetLabelsDB[cb.dbKey])
         end
-    elseif event == "PLAYER_ENTERING_WORLD" or event == "EQUIPMENT_SETS_CHANGED" then
-        RebuildItemSetCache()
-        ScheduleUpdate()
     else
         ScheduleUpdate()
     end

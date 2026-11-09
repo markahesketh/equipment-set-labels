@@ -16,9 +16,7 @@ Slash commands: `/esl` or `/equipsetlabels` opens options panel.
 
 ## Architecture
 
-Two-layer caching system:
-1. `itemSetText` - itemID to pre-formatted display string (rebuilt only on EQUIPMENT_SETS_CHANGED)
-2. `slotSetText` - "bag:slot" or "e{slotID}" to display string (rebuilt on bag/equipment changes)
+`slotSetText` maps "bag:slot" or "e{slotID}" to a display string. `ScanSlots()` rebuilds it from each set's exact item locations (`C_EquipmentSet.GetItemLocations` decoded by `EquipmentManager_GetLocationData`), not item IDs, so a second copy of a set item is not labelled.
 
 Updates are debounced (0.1s) via `ScheduleUpdate()` to coalesce rapid events.
 
