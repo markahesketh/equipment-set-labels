@@ -10,7 +10,7 @@ World of Warcraft retail addon that displays equipment set names as yellow text 
 
 No build step. Copy addon folder to WoW AddOns directory and `/reload` in-game to test changes.
 
-Update `## Interface:` in .toc file when WoW version changes (currently 120000 for Midnight/12.0).
+Update `## Interface:` in .toc file when WoW version changes (currently 16001 for WoW Forever and 120000 for Midnight/12.0).
 
 Slash commands: `/esl` or `/equipsetlabels` opens options panel.
 
@@ -29,5 +29,5 @@ Saved variables: `EquipmentSetLabelsDB` stores user preferences (showBags, showB
 - `C_EquipmentSet` for equipment set data
 - `C_Container` for bag/bank slot inspection
 - `ContainerFrameCombinedBags` is the modern unified bag view (ContainerFrame1-13 are legacy/separate view)
-- Bank container index is -1 (`BANK_CONTAINER` constant)
-- Bank bag indices are 6-12
+- The bank is a tabbed panel: enumerate buttons with `BankFrame.BankPanel:EnumerateValidItems()`, identified by `GetBankTabID()` and `GetContainerSlotID()`
+- Character bank tab indices are 6-12 (scanned range)

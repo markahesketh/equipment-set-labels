@@ -1,4 +1,4 @@
-## Interface: 120000
+## Interface: 16001, 120000
 ## Title: Equipment Set Labels
 ## Notes: Displays equipment set names as labels on item icons
 ## Author: Mark Hesketh

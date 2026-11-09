@@ -1,6 +1,5 @@
 local ADDON_NAME = "EquipmentSetLabels"
 local DISPLAY_NAME = "Equipment Set Labels"
-local BANK_CONTAINER = -1
 
 local defaults = {
     showBags = true,
@@ -68,13 +67,6 @@ local function ScanSlots()
         end
     end
 
-    for slot = 1, C_Container.GetContainerNumSlots(BANK_CONTAINER) do
-        local info = C_Container.GetContainerItemInfo(BANK_CONTAINER, slot)
-        if info and itemSetText[info.itemID] then
-            slotSetText[BANK_CONTAINER .. ":" .. slot] = itemSetText[info.itemID]
-        end
-    end
-
     for bag = 6, 12 do
         for slot = 1, C_Container.GetContainerNumSlots(bag) do
             local info = C_Container.GetContainerItemInfo(bag, slot)
@@ -137,11 +129,8 @@ local function UpdateFrames()
     end
 
     if BankFrame and BankFrame:IsShown() then
-        for i = 1, 28 do
-            local button = _G["BankFrameItem" .. i]
-            if button then
-                UpdateButton(button, db.showBank and (BANK_CONTAINER .. ":" .. i) or nil)
-            end
+        for button in BankFrame.BankPanel:EnumerateValidItems() do
+            UpdateButton(button, db.showBank and (button:GetBankTabID() .. ":" .. button:GetContainerSlotID()) or nil)
         end
     end
 
@@ -221,9 +210,8 @@ local events = CreateFrame("Frame")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_ENTERING_WORLD")
 events:RegisterEvent("EQUIPMENT_SETS_CHANGED")
-events:RegisterEvent("BAG_UPDATE_DELAYED")
+events:RegisterEvent("BAG_UPDATE")
 events:RegisterEvent("BANKFRAME_OPENED")
-events:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 events:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
 
 events:SetScript("OnEvent", function(_, event, arg1)
@@ -259,3 +247,5 @@ SlashCmdList["EQUIPMENTSETLABELS"] = function()
         Settings.OpenToCategory(optionsCategory:GetID())
     end
 end
+
+hooksecurefunc(BankFrame.BankPanel, "GenerateItemSlotsForSelectedTab", ScheduleUpdate)
